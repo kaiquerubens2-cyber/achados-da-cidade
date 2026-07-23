@@ -1,79 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:achados_da_cidade/services/auth_service.dart';
 import 'package:achados_da_cidade/services/item_service.dart';
+import 'package:geolocator/geolocator.dart';
 
-class AppRouter {
-  static GoRouter createRouter(AuthService authService) {
-    return GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => WelcomeScreen(authService: authService),
-        ),
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => const HomeMapView(),
-        ),
-      ],
-    );
-  }
-}
-
-class WelcomeScreen extends StatelessWidget {
-  final AuthService authService;
-
-  const WelcomeScreen({super.key, required this.authService});
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.location_city, size: 80, color: Colors.blueAccent),
-              const SizedBox(height: 20),
-              const Text(
-                'Achados da Cidade',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Descubra os melhores pontos e locais mapeados.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                ),
-                onPressed: () => context.go('/home'),
-                child: const Text('Entrar no App'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  State<HomeView> createState() => _HomeViewState();
 }
 
-class HomeMapView extends StatefulWidget {
-  const HomeMapView({super.key});
-
-  @override
-  State<HomeMapView> createState() => _HomeMapViewState();
-}
-
-class _HomeMapViewState extends State<HomeMapView> {
+class _HomeViewState extends State<HomeView> {
   GoogleMapController? _controller;
   LatLng _initialPosition = const LatLng(-23.550520, -46.633308);
   bool _loadingLocation = true;
