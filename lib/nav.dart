@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:achados_da_cidade/services/auth_service.dart';
@@ -74,7 +75,6 @@ class HomeMapView extends StatefulWidget {
 }
 
 class _HomeMapViewState extends State<HomeMapView> {
-  GoogleMapController? _controller;
   LatLng _initialPosition = const LatLng(-23.550520, -46.633308);
   bool _loadingLocation = true;
 
@@ -113,26 +113,31 @@ class _HomeMapViewState extends State<HomeMapView> {
       _initialPosition = LatLng(position.latitude, position.longitude);
       _loadingLocation = false;
     });
-
-    _controller?.animateCamera(
-      CameraUpdate.newLatLngZoom(_initialPosition, 15.0),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final itemService = context.watch<ItemService>();
 
-    final Set<Marker> markers = itemService.items.map((item) {
+    final markers = itemService.items.map((item) {
       return Marker(
-        markerId: MarkerId(item.id),
-        position: LatLng(item.latitude, item.longitude),
-        infoWindow: InfoWindow(
-          title: item.title,
-          snippet: item.description,
+        point: LatLng(item.latitude, item.longitude),
+        width: 80,
+        height: 80,
+        child: GestureDetector(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(item.title)),
+            );
+          },
+          child: const Icon(
+            Icons.location_pin,
+            color: Colors.red,
+            size: 40,
+          ),
         ),
       );
-    }).toSet();
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -140,17 +145,18 @@ class _HomeMapViewState extends State<HomeMapView> {
       ),
       body: _loadingLocation && itemService.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _initialPosition,
-                zoom: 14.0,
+          : FlutterMap(
+              options: MapOptions(
+                initialCenter: _initialPosition,
+                initialZoom: 14.0,
               ),
-              markers: markers,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-              onMapCreated: (GoogleMapController controller) {
-                _controller = controller;
-              },
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.achados_dacidade',
+                ),
+                MarkerLayer(markers: markers),
+              ],
             ),
     );
   }
