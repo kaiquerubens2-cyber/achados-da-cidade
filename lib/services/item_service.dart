@@ -37,4 +37,10 @@ class ItemService extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  // Método para adicionar um novo achado à lista
+  Future<void> addItem(ItemModel item) async {
+    _items.add(item);
+    notifyListeners();
+  }
 }
