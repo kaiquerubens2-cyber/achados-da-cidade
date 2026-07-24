@@ -4,8 +4,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uuid/uuid.dart';
 import 'package:achados_da_cidade/services/auth_service.dart';
 import 'package:achados_da_cidade/services/item_service.dart';
+import 'package:achados_da_cidade/models/item_model.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthService authService) {
@@ -19,6 +21,10 @@ class AppRouter {
         GoRoute(
           path: '/home',
           builder: (context, state) => const HomeMapView(),
+        ),
+        GoRoute(
+          path: '/add',
+          builder: (context, state) => const AddItemScreen(),
         ),
       ],
     );
@@ -160,15 +166,132 @@ class _HomeMapViewState extends State<HomeMapView> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Aqui você poderá navegar para a tela de cadastro do item
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Abrir tela de cadastro de novo achado')),
-          );
-        },
+        onPressed: () => context.go('/add'),
         icon: const Icon(Icons.add),
         label: const Text('Novo Achado'),
         backgroundColor: Colors.blueAccent,
+      ),
+    );
+  }
+}
+
+// --- TELA DE CADASTRO DE NOVO ACHADO ---
+class AddItemScreen extends StatefulWidget {
+  const AddItemScreen({super.key});
+
+  @override
+  State<AddItemScreen> createState() => _AddItemScreenState();
+}
+
+class _AddItemScreenState extends State<AddItemScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  
+  double _lat = -23.550520;
+  double _lng = -46.633308;
+  bool _gettingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _setCurrentLocation();
+  }
+
+  Future<void> _setCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _lat = position.latitude;
+        _lng = position.longitude;
+        _gettingLocation = false;
+      });
+    } catch (e) {
+      setState(() {
+        _gettingLocation = false;
+      });
+    }
+  }
+
+  void _saveItem() async {
+    if (_formKey.currentState!.validate()) {
+      final newItem = ItemModel(
+        id: const Uuid().v4(),
+        title: _titleController.text,
+        description: _descriptionController.text,
+        latitude: _lat,
+        longitude: _lng,
+      );
+
+      await context.read<ItemService>().addItem(newItem);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Achado cadastrado com sucesso!')),
+        );
+        context.go('/home');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cadastrar Novo Achado'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/home'),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Título do Achado',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Por favor, insira um título'
+                    : null,
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Descrição',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 20),
+              _gettingLocation
+                  ? const Center(child: CircularProgressIndicator())
+                  : Text(
+                      'Localização atual capturada:\nLat: ${_lat.toStringAsFixed(4)}, Lng: ${_lng.toStringAsFixed(4)}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+              const SizedBox(height: 30),
+              ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+              ).wrap(
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  onPressed: _saveItem,
+                  child: const Text('Salvar Achado', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
