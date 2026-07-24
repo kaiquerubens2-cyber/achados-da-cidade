@@ -159,6 +159,17 @@ class _HomeMapViewState extends State<HomeMapView> {
                 MarkerLayer(markers: markers),
               ],
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Aqui você poderá navegar para a tela de cadastro do item
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Abrir tela de cadastro de novo achado')),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Novo Achado'),
+        backgroundColor: Colors.blueAccent,
+      ),
     );
   }
 }
