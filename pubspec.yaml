@@ -32,6 +32,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # Adicionado para permitir o carregamento de imagens por código (Image.asset)
+  assets:
+    - assets/icons/
+
 flutter_launcher_icons:
   android: true
   ios: false
