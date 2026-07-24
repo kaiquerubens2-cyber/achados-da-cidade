@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "252318672359",
+    "project_id": "achados-da-cidade",
+    "storage_bucket": "achados-da-cidade.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:252318672359:android:cd8ade9a958f59fafac942",
+        "android_client_info": {
+          "package_name": "com.achados_dacidade"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_ojtzP8DVNf1rywdvsdQHQw-01xr85-Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

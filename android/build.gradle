@@ -1,20 +1,48 @@
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def flutterRoot = localProperties.getProperty('flutter.root')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.root in the local.properties file.")
+}
+
+android {
+    namespace "com.achados_dacidade"
+    compileSdkVersion flutter.compileSdkVersion
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    defaultConfig {
+        applicationId "com.achados_dacidade"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
     }
 }
 
-rootProject.buildDir = "../build"
-
-subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+flutter {
+    source '../..'
 }
 
-subprojects {
-    project.evaluationDependsOn(":app")
+dependencies {
 }
 
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
-}
+apply plugin: 'com.google.gms.google-services'
