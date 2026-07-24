@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:achados_da_cidade/theme.dart';
 import 'package:achados_da_cidade/nav.dart';
@@ -8,6 +9,9 @@ import 'package:achados_da_cidade/services/chat_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializa o Firebase antes de carregar os serviços
+  await Firebase.initializeApp();
 
   final authService = AuthService();
   await authService.init();
