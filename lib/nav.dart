@@ -1,3 +1,203 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:achados_da_cidade/services/auth_service.dart';
+import 'package:achados_da_cidade/services/item_service.dart';
+import 'package:achados_da_cidade/models/item_model.dart';
+
+class AppRouter {
+  static GoRouter createRouter(AuthService authService) {
+    return GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => WelcomeScreen(authService: authService),
+        ),
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => const HomeMapView(),
+        ),
+        GoRoute(
+          path: '/add',
+          builder: (context, state) => const AddItemScreen(),
+        ),
+      ],
+    );
+  }
+}
+
+class WelcomeScreen extends StatelessWidget {
+  final AuthService authService;
+
+  const WelcomeScreen({super.key, required this.authService});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_city, size: 80, color: Colors.blueAccent),
+              const SizedBox(height: 20),
+              const Text(
+                'Achados da Cidade',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Descubra os melhores pontos e locais mapeados.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                ),
+                onPressed: () => context.go('/home'),
+                child: const Text('Entrar no App'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeMapView extends StatefulWidget {
+  const HomeMapView({super.key});
+
+  @override
+  State<HomeMapView> createState() => _HomeMapViewState();
+}
+
+class _HomeMapViewState extends State<HomeMapView> {
+  LatLng _initialPosition = const LatLng(-23.550520, -46.633308);
+  bool _loadingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _determinePosition();
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() => _loadingLocation = false);
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() => _loadingLocation = false);
+        return;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      setState(() => _loadingLocation = false);
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      _initialPosition = LatLng(position.latitude, position.longitude);
+      _loadingLocation = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemService = context.watch<ItemService>();
+
+    final markers = itemService.items.map((item) {
+      return Marker(
+        point: LatLng(item.latitude, item.longitude),
+        width: 80,
+        height: 80,
+        child: GestureDetector(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              builder: (context) => Container(
+                padding: const EdgeInsets.all(20),
+                height: 280,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(item.description),
+                    const SizedBox(height: 8),
+                    if (item.imagePath != null) ...[
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(File(item.imagePath!), width: double.infinity, fit: BoxFit.cover),
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            );
+          },
+          child: const Icon(
+            Icons.location_pin,
+            color: Colors.red,
+            size: 40,
+          ),
+        ),
+      );
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Achados da Cidade'),
+      ),
+      body: _loadingLocation && itemService.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : FlutterMap(
+              options: MapOptions(
+                initialCenter: _initialPosition,
+                initialZoom: 14.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.achados_dacidade',
+                  maxZoom: 19,
+                ),
+                MarkerLayer(markers: markers),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/add'),
+        icon: const Icon(Icons.add),
+        label: const Text('Novo Achado'),
+        backgroundColor: Colors.blueAccent,
+      ),
+    );
+  }
+}
+
 // --- TELA DE CADASTRO DE NOVO ACHADO COM MAPA E FOTO ---
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
@@ -11,8 +211,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   
-  // Padrão inicial (ex: Centro de Atalaia - AL ou coordenadas aproximadas)
-  LatLng _selectedLocation = const LatLng(-9.5036, -36.0125); 
+  LatLng _selectedLocation = const LatLng(-9.5036, -36.0125); // Padrão inicial em Atalaia - AL
   bool _gettingLocation = true;
   
   File? _selectedImage;
@@ -93,7 +292,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Título do Achado (ex: Chave em Atalaia)',
+                  labelText: 'Título do Achado',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) => value == null || value.isEmpty
@@ -154,7 +353,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               
               const SizedBox(height: 15),
               const Text(
-                'Toque no mapa abaixo para marcar o local exato do achado:',
+                'Toque no mapa para marcar o local exato do achado:',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               const SizedBox(height: 8),
