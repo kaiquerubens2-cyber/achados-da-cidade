@@ -221,8 +221,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
         description: _descriptionController.text,
         latitude: _lat,
         longitude: _lng,
+        category: 'Geral', // Adicionado parâmetro obrigatório exigido pelo modelo
       );
 
+      // Utilizando o método correto de salvamento ou adição do item
       await context.read<ItemService>().addItem(newItem);
       
       if (mounted) {
@@ -277,17 +279,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       style: const TextStyle(color: Colors.grey),
                     ),
               const SizedBox(height: 30),
-              ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-              ).wrap(
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(50),
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  onPressed: _saveItem,
-                  child: const Text('Salvar Achado', style: TextStyle(color: Colors.white)),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                  backgroundColor: Colors.blueAccent,
                 ),
+                onPressed: _saveItem,
+                child: const Text('Salvar Achado', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
