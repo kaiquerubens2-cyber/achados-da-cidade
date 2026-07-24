@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -5,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:achados_da_cidade/services/auth_service.dart';
 import 'package:achados_da_cidade/services/item_service.dart';
 import 'package:achados_da_cidade/models/item_model.dart';
@@ -132,8 +134,29 @@ class _HomeMapViewState extends State<HomeMapView> {
         height: 80,
         child: GestureDetector(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(item.title)),
+            showModalBottomSheet(
+              context: context,
+              builder: (context) => Container(
+                padding: const EdgeInsets.all(20),
+                height: 250,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(item.description),
+                    const SizedBox(height: 8),
+                    if (item.imagePath != null) ...[
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(File(item.imagePath!), width: double.infinity, fit: BoxFit.cover),
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
             );
           },
           child: const Icon(
@@ -175,7 +198,7 @@ class _HomeMapViewState extends State<HomeMapView> {
   }
 }
 
-// --- TELA DE CADASTRO DE NOVO ACHADO ---
+// --- TELA DE CADASTRO DE NOVO ACHADO COM FOTO ---
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
 
@@ -191,6 +214,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
   double _lat = -23.550520;
   double _lng = -46.633308;
   bool _gettingLocation = true;
+  
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -213,6 +239,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
+  Future<void> _takePhoto() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+    );
+
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+    }
+  }
+
   void _saveItem() async {
     if (_formKey.currentState!.validate()) {
       final newItem = ItemModel(
@@ -221,15 +260,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
         description: _descriptionController.text,
         latitude: _lat,
         longitude: _lng,
-        category: 'Geral', // Adicionado parâmetro obrigatório exigido pelo modelo
+        category: 'Geral',
+        imagePath: _selectedImage?.path,
       );
 
-      // Utilizando o método correto de salvamento ou adição do item
       await context.read<ItemService>().addItem(newItem);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Achado cadastrado com sucesso!')),
+          const SnackBar(content: Text('Achado cadastrado com foto com sucesso!')),
         );
         context.go('/home');
       }
@@ -272,11 +311,55 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 20),
+              
+              // Seção de visualização e captura da foto
+              Center(
+                child: _selectedImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          _selectedImage!,
+                          height: 150,
+                          width: 150,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Container(
+                        height: 150,
+                        width: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade400),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt, size: 40, color: Colors.grey),
+                            SizedBox(height: 8),
+                            Text('Sem foto', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _takePhoto,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Tirar Foto do Item'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[800],
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              
+              const SizedBox(height: 20),
               _gettingLocation
                   ? const Center(child: CircularProgressIndicator())
                   : Text(
                       'Localização atual capturada:\nLat: ${_lat.toStringAsFixed(4)}, Lng: ${_lng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
               const SizedBox(height: 30),
               ElevatedButton(
@@ -285,7 +368,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   backgroundColor: Colors.blueAccent,
                 ),
                 onPressed: _saveItem,
-                child: const Text('Salvar Achado', style: TextStyle(color: Colors.white)),
+                child: const Text('Salvar Achado', style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ],
           ),
